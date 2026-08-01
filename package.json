@@ -1,0 +1,5 @@
+{
+  "name": "fantasy-football-app",
+  "private": true,
+  "workspaces": ["packages/*"]
+}
