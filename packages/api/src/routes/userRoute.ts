@@ -1,19 +1,14 @@
 import { Hono } from 'hono'
 import type { User } from '@fantasy/shared'
-import { Database } from 'bun:sqlite'
+import { db } from '../database/db'
 
-type AppBindings = {
-    Variables: {
-        DB: Database
-    }
-}
-
-const userRoute = new Hono<AppBindings>()
+const userRoute = new Hono()
 
 userRoute.get('/', (c) => c.text('Hello World!'))
 userRoute.get('/:id', (c) => {
   const id = c.req.param('id')
-  return c.text(`Hello Hono! Your ID is ${id}`)
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id)
+  return c.json(user)
 })
 userRoute.post('/', async (c) => {
   const user: Partial<User> = await c.req.json()
@@ -22,11 +17,16 @@ userRoute.post('/', async (c) => {
     return c.json({ message: 'Missing required fields' }, 400)
   }
 
-  return c.json({ message: 'Data received', data: user })
+  const result = db.prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)')
+    .run(user.name, user.email, user.password)
+  result.lastInsertRowid
+
+  return c.text(`Created User: ${result.lastInsertRowid}`)
 })
 userRoute.delete('/:id', (c) => {
   const id = c.req.param('id')
-  return c.text(`Deleted item with ID: ${id}`)
+  db.prepare('DELETE FROM users WHERE id = ?').run(id)
+  return c.text(`Deleted user with ID: ${id}`)
 })
 
 export { userRoute }
