@@ -39,12 +39,12 @@ function initializePlayersTable(db: Database) {
     db.run(`
         CREATE TABLE IF NOT EXISTS players (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            position TEXT NOT NULL,
             sleeper_id TEXT NOT NULL UNIQUE,
-            team TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            position TEXT NOT NULL,
+            team TEXT
         )
     `);
 }
