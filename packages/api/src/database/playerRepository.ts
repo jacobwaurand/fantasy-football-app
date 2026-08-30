@@ -1,7 +1,5 @@
 import { db } from './db'
-import { Player } from '@fantasy/shared/types/Player/player'
-
-type SleeperPlayer = Partial<Player>;
+import { SleeperPlayer } from '../sleeper/sleeperApi'
 
 export async function insertPlayers(players: SleeperPlayer[]) {
   if (!players || players.length === 0) {
