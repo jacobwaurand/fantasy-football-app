@@ -1,18 +1,18 @@
-import { getNflPlayers, getWeeklyStats } from '../sleeper/sleeperApi'
-import { insertPlayers } from '../database/playerRepository'
-import { Player } from '@fantasy/shared/types/Player/player'
+import { getNflPlayers, getWeeklyStats } from "../sleeper/sleeperApi";
+import { insertPlayers } from "../database/playerRepository";
+import { Player } from "@fantasy/shared/types/Player/player";
 
 function startCron() {
-    dailyCron()
-    // weeklyCron()
+  dailyCron();
+  // weeklyCron()
 }
 
 function dailyCron() {
-    Bun.cron('0 0 * * *', async () => {
-        const players = await getNflPlayers()
-        const res = await insertPlayers(players)
-        console.log(`Inserted ${res.inserted} players`)
-    });
+  Bun.cron("*/1 * * * *", async () => {
+    const players = await getNflPlayers();
+    const res = await insertPlayers(players);
+    console.log(`Inserted ${res.inserted} players`);
+  });
 }
 
 // function weeklyCron() {
@@ -22,4 +22,4 @@ function dailyCron() {
 //     });
 // }
 
-export { startCron }
+export { startCron };

@@ -1,69 +1,81 @@
-## Plan: Fantasy Football RPG MVP
+## Plan: Fantasy Football RPG — Co-op Boss Mode (Campaign)
 
-Build a desktop-first standard-redraft web app on the existing Bun/Hono workspace. Add a SQLite-backed league and scoring system, integrate Sleeper data through an isolated provider adapter, and make the four public manager classes a deterministic layer over ordinary fantasy scoring.
+Build a 4-player cooperative PVE campaign mode on the existing Bun/Hono workspace. Each player drafts a roster, then week by week the party fights a scaling boss with stat-based challenges. Beating bosses awards XP that levels classes and unlocks abilities. The mode is a deterministic layer over ordinary fantasy scoring, driven by Sleeper data.
 
-### Product Rules
+### Big Picture
 
-- A manager selects Knight, Wizard, Cleric, or Rogue when joining a league and retains it for the season. Classes are public and duplicates are allowed.
-- Each class exposes two once-per-matchup abilities. Managers may select and use both after Wednesday lineup lock until the Thursday Night Football deadline; selected abilities remain hidden until that deadline.
-- The resolver uses deterministic phases: defense first, theft second, then scoring. Persist every submitted action and generated resolution record for an auditable matchup history.
-- Initial balance targets:
-  - Knight: Fortify blocks all incoming harmful effects; Charge boosts a selected starting RB or TE by 10%.
-  - Wizard: Hex reduces a selected opponent position group by 10%; Arcane Surge boosts a selected own position group by 10%.
-  - Cleric: Healing adds 5 total team points; Sanctuary protects one selected position group from opponent penalties.
-  - Rogue: Pickpocket transfers 50% of an active opponent score boost; Evasion cancels one incoming harmful effect.
-- Treat the individual score-affecting effects as mutually composable only through the resolver's declared priority. Never mutate provider raw stats; store base score, applied effects, and final score separately.
-- The Wednesday lineup lock is enforced server-side. At final matchup calculation, an officially inactive locked starter is replaced by the highest-projected bench player at the exact same position. No flex substitution is included in v1.
-- Commissioners create/invite/configure leagues but do not get manual in-season overrides in v1. Valid configurations are 8-14 teams, 13-15 regular-season weeks, and 4 or 6 playoff teams.
+- **Mode:** PVE co-op boss mode for v1. PVP head-to-head is a later mode (keep `matchups`/`leagues` tables around, unused).
+- **Party:** 4 players, each with an individual roster. Scores are **pooled** for combined boss challenges, but bosses can also demand **individual** contributions from each team.
+- **Loop:** Create/join campaign → D20 initiative roll → snake draft → each NFL week fight one boss from a preset 17-boss chain → win advances, lose refights next week → weekly pickups → XP/leveling.
 
-### Steps
+### Confirmed Rules
 
-1. **Establish the app and persistence foundation.** Add a desktop-first web workspace package and extend the root Bun workspace configuration. Add SQLite initialization, migrations, repository interfaces, and environment configuration to the Hono API. Use a migration-backed schema for users, sessions, leagues, memberships/teams, league settings, NFL players, roster slots, drafts/picks, matchups, submitted abilities, score snapshots, and resolution/audit events. This blocks all later persistence work.
-2. **Define the shared domain contract.** Expand the shared types around the current League, Team, Player, Schedule, and Settings models. Add `FantasyClass`, ability identifiers and target types, lineup/roster state, league lifecycle state, draft state, matchup state, score breakdowns, source-data snapshots, and typed API request/response contracts. Keep the existing NFL `Position` separate from a manager's `FantasyClass`.
-3. **Build provider isolation and validate Sleeper data.** Create a Sleeper client behind a provider interface for NFL state, players, schedules, stats, roster data, injury/inactive status, and projections. Begin with a capability test and cached fixtures that verifies which required fields Sleeper currently offers, especially projections and official inactives. Use provider-neutral persistence so a supplemental projection/status provider can be introduced without changing matchup logic if Sleeper lacks an essential field.
-4. **Implement identity, league setup, and membership.** Add account registration, login/session handling, league creation, bounded league configuration, invitation creation/acceptance, manager team naming, and season-long public class selection. Enforce league capacity and accept class duplicates. Expose Hono routes that return only the current manager's private state while the weekly choice remains sealed.
-5. **Implement roster and live snake draft workflows.** Add draft order generation, serpentine pick validation, turn/deadline state, player availability, roster composition validation, and real-time client updates. Persist each pick as an immutable event and create team roster entries. Provide roster management and a weekly lineup editor that validates eligible starters before the Wednesday lock.
-6. **Implement weekly scheduling, locks, and abilities.** Generate head-to-head regular-season schedules and playoff seeding from the selected league parameters. Run server-side deadline jobs for lineup locking, the ability window, sealing/revealing choices, and finalization. Add ability-target validation: Charge only targets a starting RB/TE; position effects target valid opposing/own starting groups; healing has no target; protective abilities are recorded against the protected action or position.
-7. **Implement the deterministic scoring resolver.** In a pure shared/domain service, ingest immutable base player scores, calculate team positional subtotals, apply defensive blocks, resolve Pickpocket against surviving score boosts, and then apply boosts/penalties/healing. Return a score breakdown with each action's accepted, blocked, stolen, or canceled status. Store the result and make finalization idempotent.
-8. **Implement the post-lock inactive replacement rule.** At finalization, inspect locked starters against the verified inactive status snapshot. For each eligible starter, select the highest-projected bench player at the exact same position, persist the automatic substitution and its projection/status evidence, then score the amended lineup. Do not replace players merely because they produced zero points.
-9. **Build desktop web workflows.** Implement authenticated pages for league discovery/creation, invitation acceptance/class selection, live draft, roster and Wednesday lineup lock, Thursday sealed ability choices, matchup scoreboards, revealed ability outcomes, standings, schedules, and immutable weekly scoring details. Make deadline time zones and current league state obvious, and use server-authoritative data for every mutation.
-10. **Test and operationalize the release.** Add unit tests for class target validation and resolver precedence, integration tests for deadlines/draft/roster transitions, and API tests for authorization and secrecy of un-revealed abilities. Seed a complete test league with provider fixtures. Add structured logging, job retry/idempotency protections, and API error handling before deployment.
+- **Rosters:** 9 starters, no bench: QB, RB, RB, WR, WR, TE, FLEX, DEF, K.
+- **Scoring:** Standard PPR defaults for now, architected as a configurable scoring table so the owners can refine (custom scoring table to be supplied and encoded) later.
+- **Draft:** Live snake draft seeded by a server-side D20 initiative roll (tie-breaker rule required).
+- **Weekly pickups:** Up to 2 replacements per member per week from a shared pool. A player can exist on only one roster. Injured players flagged via Sleeper `status`.
+- **Bosses:** Preset chain of 17 bosses (NFL-aligned), escalating difficulty. Challenges are mixed scope: pooled (e.g., 400 total pts, 8 TDs), individual (e.g., each team scores 2 TDs), and fun real-stat categories (e.g., longest TD across the party, best single-player score) — all computable from Sleeper weekly stat fields.
+- **Refights:** Boss number is campaign state (`currentBossIndex`), tied to real NFL weeks for stats. One boss fight per real week. Win → advance to the next boss next week. Loss → refight the same boss next week. Falling behind the chain is permanent.
+- **Classes:** Knight, Wizard, Cleric, Rogue retained. Simple level tiers; XP awarded on boss wins, harder bosses award more. Levels gate ability/passive unlocks so players scale with the bosses.
+- **Locks:** Per-player game-time locks (a player locks when their real game kicks off). Server-enforced.
+- **Auth:** Simple shared league — invite code + display name, no passwords. Lightweight member token issued on join so actions map to a member slot.
+- **Stack:** All Bun — `bun:sqlite`, Hono router, Bun cron, workspace-shared types, Vue frontend.
 
-### Relevant Files
+### Work Plan
 
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/package.json` - Extend workspaces and root scripts for API, shared types, web client, migrations, and tests.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/api/package.json` - Add SQLite, migration, auth, scheduling, and test dependencies.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/api/src/index.ts` - Compose database lifecycle, routes, deadline jobs, and error handling.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/api/src/routes/userController.ts` - Replace the placeholder pattern with authenticated user/session behavior; use it as a route-structure reference for league, draft, roster, matchup, and ability controllers.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/League/index.ts` - Re-export the expanded league lifecycle, schedule, settings, matchup, and fantasy-class contracts.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/League/league.ts` - Extend the minimal League model with configuration, season state, deadlines, and ownership.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/League/schedule.ts` - Extend weekly pairings into persisted matchup state and playoff scheduling.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/League/settings.ts` - Add bounded team/week/playoff and deadline configuration while preserving roster-position settings.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/Team/team.ts` - Add manager class, roster, lineup, and score state without conflating it with NFL player positions.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/Player/player.ts` - Add provider identity and score/projection snapshots while retaining the existing `Position` relationship.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/shared/types/index.ts` - Provide the API and web app a single public shared-contract entry point.
-- `c:/Users/User/Documents/Code Projects/fantasy-football-app/packages/web/` - New desktop-first client workspace for the league, draft, roster, ability, and matchup views.
+#### Phase 0 — Foundation cleanup
+- Fix broken import `packages/shared/types/Team/team.ts:1` (`../Class/class` → the `Classes` folder).
+- Build out the stubbed `weekly_player_stats` table + `insertWeeklyPlayerStats()` in `packages/api/src/database/playerRepository.ts:42` (currently prepares but never executes; table/columns don't exist in `init.ts`).
+- Add a `scores`/`scoring_config` seam so points are computed from raw Sleeper stat fields (pass/rush/rec/td/int/etc.) — PPR defaults first, refineable to a custom table later.
 
-### Verification
+#### Phase 1 — Shared domain contract (`packages/shared`)
+Add types: `Campaign`, `CampaignMember` (class, level, xp), `Boss`, `BossChallenge` (stat, scope `pooled|individual`, target), `RosterSlot`, `DraftPick`, `CampaignWeek`, `AbilitySubmission`, `BossFightResult`, `XpProgression`. Retune `AbilityTarget` (`Classes/ability.ts`) so abilities can target boss challenges rather than opponent teams.
 
-1. Run the provider capability test against Sleeper and recorded fixtures; verify the exact player identifiers, NFL state, schedules, weekly stats, injury/inactive status, and projection data needed by the feature. Document any unavailable fields before enabling automatic replacement in production.
-2. Run migration tests against an empty SQLite database and verify foreign keys, unique draft picks, sealed ability privacy, and idempotent resolution records.
-3. Unit-test every class interaction: Fortify and Evasion block valid harmful effects, Sanctuary blocks penalties only for its selected position, Pickpocket transfers only an unblocked surviving score boost, and score modifiers are applied exactly once.
-4. Simulate a full league through snake draft, roster construction, Wednesday lock, hidden Thursday submissions, reveal, weekly finalization, standings update, and playoff seeding.
-5. Simulate official inactive and non-inactive zero-score starters; verify only the former receives an exact-position, highest-projection bench substitution at finalization.
-6. Exercise desktop workflows in two authenticated browser sessions to verify invitation flows, draft concurrency, private ability selection, public reveal, and live score refresh.
+#### Phase 2 — Campaign create/join + classes
+- API routes: `create-campaign` (invite code), `join-campaign` (code + display name + class), `get-campaign`.
+- DB tables: `campaigns`, `campaign_members` (slot, class, level, xp).
+- Simple XP config: thresholds + ability unlock table (e.g., ability 1 at lvl 2, passive at lvl 3, ability 2 at lvl 4).
 
-### Scope Boundaries
+#### Phase 3 — Draft
+- Server-side D20 initiative roll per member; tie-breaker rule.
+- Snake order generation; per-pick validation (unavailable player, roster-position validity).
+- `draft_picks` immutable event log; `campaign_rosters` with fixed 9 slots.
+- Turn-based with live sync (Pinia store + polling or SSE) — decide during implementation.
 
-- Included: standard redraft, live snake draft, roster/lineup management, configurable bounded league formats, Sleeper integration, automated weekly resolution, four starter classes, live results, and a desktop-first web app.
-- Excluded from v1: mobile-native app, lineup-altering abilities, auctions, trades/waivers, commissioner overrides, arbitrary league structures, additional classes/progression, duplicate-player replacement across positions, and manual statistical corrections.
+#### Phase 4 — Weekly stats, scoring, and boss resolution engine
+- Enable weekly Sleeper stats cron (currently commented in `sleeperCron.ts`); nightly player-status refresh.
+- Pure **resolver service**: raw stats → scoring config → per-player score → team totals → per-challenge pass/fail (pooled + individual) → per-player game-time lock enforcement → boss outcome.
+- DB tables: `campaign_weeks`, `bosses`, `boss_challenges`, `boss_fight_results` (immutable, audit-friendly resolution records).
+- Advance/refight: `currentBossIndex` increments only on a win; one fight per real week.
+
+#### Phase 5 — XP/leveling gating
+- XP on wins scaled by boss number; small/partial XP on loss (simple tiers). Unlocks apply to the next fight for determinism.
+
+#### Phase 6 — Weekly pickups
+- Shared pool = all Sleeper players not currently on any roster.
+- Max 2 swaps per member per week; per-player game-time lock prevents dropping a locked player; injured players auto-flagged via `players.status`.
+- `campaign_rosters` supports `dropped_at`/`added_at` for audit.
+
+#### Phase 7 — Frontend (Vue, `packages/frontend`)
+Pages: create/join campaign, class select, initiative roll + live draft board, roster/lock lineup, **boss dashboard** (challenges + this week's live scores per challenge), level/XP screen, results & history (refight banner). Replace scaffolded `App.vue`, empty `router/index.ts`, `counter.ts`.
+
+#### Phase 8 — Tests & ops
+- Unit tests for challenge evaluation (pooled vs individual), class target validation, XP math, scoring config.
+- Scenario test: simulate a full campaign through draft → week-by-week boss fights → losses/refights → pickups → level ups.
+- Structured logging, idempotent resolution, graceful cron failure handling.
+
+### PVE Ability Tuning (Draft Direction)
+
+The existing 8 abilities (Hex reduces an *opponent* position group, Pickpocket transfers *opponent* score boosts, etc.) are PVP-designed. For PVE they must be reinterpreted against the boss's challenge targets rather than an opposing team — e.g., Wizard's Hex reduces a challenge target's difficulty for the party, Rogue's Pickpocket converts a boss debuff into party points. Exact re-tunes a decision to finalize during implementation.
+
+### Open Items / Risks
+
+- **Sleeper data completeness** for fun categories (longest TD, DEF sacks, etc.) — verify which raw fields Sleeper exposes before locking boss challenge types (provider capability test).
+- **PVE ability re-tuning** for all 4 classes.
+- Long-term flagged: roguelike endless mode (v2), PVP mode (later).
 
 ### Dependencies and Risks
 
-- The client and database foundation can begin in parallel after the shared contract is established. Provider validation must finish before finalizing auto-substitution implementation. League/draft/roster work blocks weekly ability and scoring workflows; the pure resolver can be developed in parallel with the web UI using fixtures.
-- Sleeper API availability and data completeness are the material product risk. The provider adapter and raw snapshots protect the core rules engine from changing source data and make a later supplemental provider tractable.
-- Authentication is intentionally specified as API-managed sessions backed by server-side SQLite, matching the selected Hono plus SQLite architecture; select a password hashing/session library during implementation rather than inventing cryptography.
-
-### Working Scope
-
-- Planning only; no production edits are made during this session.
+- Foundation (Phase 0-2) blocks draft and weekly work.
+- Draft/roster work blocks the weekly boss + scoring loop; the pure resolver can be developed in parallel with the web UI using fixtures.
+- Sleeper API availability and raw-stat completeness are the material product risk; provider-neutral persistence keeps the rules engine isolated from source changes.

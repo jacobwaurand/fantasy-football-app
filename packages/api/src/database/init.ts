@@ -1,15 +1,15 @@
-import { Database } from 'bun:sqlite'
+import { Database } from "bun:sqlite";
 
 export function initializeDatabase(db: Database) {
-    initializeUsersTable(db);
-    initializeTeamsTable(db);
-    initializePlayersTable(db);
-    initializeMatchupsTable(db);
-    initializeLeaguesTable(db);
+  initializeUsersTable(db);
+  initializeTeamsTable(db);
+  initializePlayersTable(db);
+  initializeMatchupsTable(db);
+  initializeLeaguesTable(db);
 }
 
 function initializeUsersTable(db: Database) {
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -22,7 +22,7 @@ function initializeUsersTable(db: Database) {
 }
 
 function initializeTeamsTable(db: Database) {
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS teams (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -36,21 +36,22 @@ function initializeTeamsTable(db: Database) {
 }
 
 function initializePlayersTable(db: Database) {
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS players (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sleeper_id TEXT NOT NULL UNIQUE,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            position TEXT NOT NULL,
-            team TEXT
+            first_name TEXT,
+            last_name TEXT,
+            full_name TEXT,
+            position TEXT,
+            team TEXT,
+            status TEXT
         )
     `);
 }
 
 function initializeMatchupsTable(db: Database) {
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             week INTEGER NOT NULL,
@@ -63,7 +64,7 @@ function initializeMatchupsTable(db: Database) {
 }
 
 function initializeLeaguesTable(db: Database) {
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS leagues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -74,7 +75,7 @@ function initializeLeaguesTable(db: Database) {
         )
     `);
 
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS roster_settings (
             league_id INTEGER PRIMARY KEY,
             bench_slots INTEGER NOT NULL,
@@ -89,7 +90,7 @@ function initializeLeaguesTable(db: Database) {
         )
     `);
 
-    db.run(`
+  db.run(`
         CREATE TABLE IF NOT EXISTS league_settings (
             league_id INTEGER PRIMARY KEY,
             number_of_teams INTEGER NOT NULL,

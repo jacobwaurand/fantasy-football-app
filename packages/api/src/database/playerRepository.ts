@@ -1,23 +1,23 @@
-import { db } from './db'
-import { SleeperPlayer } from '../sleeper/sleeperApi'
+import { db } from "./db";
+import { SleeperPlayer } from "../sleeper/sleeperApi";
 
 export async function insertPlayers(players: SleeperPlayer[]) {
   if (!players || players.length === 0) {
-    return { inserted: 0 }
+    return { inserted: 0 };
   }
 
   const insertStatement = db.prepare(`
-    INSERT OR IGNORE INTO players (sleeper_id, first_name, last_name, full_name, position, team)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `)
+    INSERT OR IGNORE INTO players (sleeper_id, first_name, last_name, full_name, position, team, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
 
-  let inserted = 0
+  let inserted = 0;
 
   db.transaction(() => {
     for (const player of players) {
-      const sleeper_id = player.sleeper_id ?? null
+      const sleeper_id = player.sleeper_id ?? null;
       if (!sleeper_id) {
-        continue
+        continue;
       }
 
       const result = insertStatement.run(
@@ -26,14 +26,26 @@ export async function insertPlayers(players: SleeperPlayer[]) {
         player.last_name ?? null,
         player.full_name ?? null,
         player.position ?? null,
-        player.team ?? null
-      )
+        player.team ?? null,
+        player.status ?? null,
+      );
 
       if (result.changes > 0) {
-        inserted += 1
+        inserted += 1;
       }
     }
-  })()
+  })();
 
-  return { inserted }
+  return { inserted };
+}
+
+export async function insertWeeklyPlayerStats(weeklyStats: any[]) {
+  if (!weeklyStats || weeklyStats.length === 0) {
+    return { inserted: 0 };
+  }
+
+  const insertStatement = db.prepare(`
+    INSERT OR IGNORE INTO weekly_player_stats (player_id, week, season, passing_yards, passing_touchdowns, interceptions, rushing_yards, rushing_touchdowns, receptions, receiving_yards, receiving_touchdowns)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
 }
