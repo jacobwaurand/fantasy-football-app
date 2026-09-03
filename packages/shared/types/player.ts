@@ -1,5 +1,4 @@
-
-type Player = {
+export type Player = {
     id: number;
     sleeper_id: string;
     first_name: string;
@@ -8,4 +7,3 @@ type Player = {
     position: string;
     team?: string;
 };
-export type { Player };

@@ -1,2 +1,8 @@
-type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
-export default Position;
+export type Position =
+  | "QB"
+  | "RB"
+  | "WR"
+  | "TE"
+  | "FLEX"
+  | "DEF"
+  | "K";
