@@ -5,3 +5,9 @@ export type Team = {
     userId: number;
     classId?: string;
 };
+
+export type TeamPlayer = {
+    playerId: number;
+    teamId: number;
+    leagueId: number;
+};

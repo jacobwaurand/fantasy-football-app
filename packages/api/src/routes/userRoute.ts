@@ -1,13 +1,12 @@
 import { Hono } from 'hono'
 import type { User } from '@fantasy/shared'
-import { db } from '../database/db'
+import { createUser, deleteUserById, getUserById } from '../database/userRepository'
 
 const userRoute = new Hono()
 
-userRoute.get('/', (c) => c.text('Hello World!'))
 userRoute.get('/:id', (c) => {
   const id = c.req.param('id')
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id)
+  const user = getUserById(id)
   return c.json(user)
 })
 userRoute.post('/', async (c) => {
@@ -17,15 +16,17 @@ userRoute.post('/', async (c) => {
     return c.json({ message: 'Missing required fields' }, 400)
   }
 
-  const result = db.prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)')
-    .run(user.name, user.email, user.password)
-  result.lastInsertRowid
+  const result = createUser({
+    name: user.name,
+    email: user.email,
+    password: user.password,
+  })
 
   return c.text(`Created User: ${result.lastInsertRowid}`)
 })
 userRoute.delete('/:id', (c) => {
   const id = c.req.param('id')
-  db.prepare('DELETE FROM users WHERE id = ?').run(id)
+  deleteUserById(id)
   return c.text(`Deleted user with ID: ${id}`)
 })
 
