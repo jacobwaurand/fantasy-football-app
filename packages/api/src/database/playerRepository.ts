@@ -1,6 +1,37 @@
 import { db } from "./db";
 import { SleeperPlayer } from "../sleeper/sleeperApi";
 
+export function getPlayerIdsByLeagueId(leagueId: string) {
+  return db.prepare(`
+    SELECT players.id
+    FROM players
+    INNER JOIN team_players ON team_players.player_id = players.id
+    INNER JOIN teams ON teams.id = team_players.team_id
+    WHERE teams.league_id = ?
+  `).all(leagueId)
+}
+
+export function addPlayerToTeam(teamId: number, playerId: number) {
+    return db.prepare(
+        'INSERT INTO team_players (player_id, team_id) VALUES (?, ?)',
+    ).run(playerId, teamId)
+}
+
+export function removePlayerFromTeam(teamId: number, playerId: number) {
+    return db.prepare(
+        'DELETE FROM team_players WHERE player_id = ? AND team_id = ?',
+    ).run(playerId, teamId)
+}
+
+export function getPlayersByTeamId(teamId: string) {
+    return db.prepare(`
+        SELECT players.*
+        FROM players
+        INNER JOIN team_players ON team_players.player_id = players.id
+        WHERE team_players.team_id = ?
+    `).all(teamId)
+}
+
 export async function insertPlayers(players: SleeperPlayer[]) {
   if (!players || players.length === 0) {
     return { inserted: 0 };

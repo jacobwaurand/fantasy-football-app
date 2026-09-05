@@ -4,6 +4,7 @@ export function initializeDatabase(db: Database) {
   initializeUsersTable(db);
   initializeTeamsTable(db);
   initializePlayersTable(db);
+    initializeTeamPlayersTable(db);
   initializeMatchupsTable(db);
   initializeLeaguesTable(db);
 }
@@ -26,11 +27,13 @@ function initializeTeamsTable(db: Database) {
         CREATE TABLE IF NOT EXISTS teams (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            owner_id INTEGER NOT NULL,
-            fantasy_class TEXT NOT NULL,
+            league_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            class_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (owner_id) REFERENCES users(id)
+            FOREIGN KEY (league_id) REFERENCES leagues(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
 }
@@ -46,6 +49,18 @@ function initializePlayersTable(db: Database) {
             position TEXT,
             team TEXT,
             status TEXT
+        )
+    `);
+}
+
+function initializeTeamPlayersTable(db: Database) {
+  db.run(`
+        CREATE TABLE IF NOT EXISTS team_players (
+            player_id INTEGER NOT NULL,
+            team_id INTEGER NOT NULL,
+            PRIMARY KEY (player_id, team_id),
+            FOREIGN KEY (player_id) REFERENCES players(id),
+            FOREIGN KEY (team_id) REFERENCES teams(id)
         )
     `);
 }
@@ -69,6 +84,7 @@ function initializeLeaguesTable(db: Database) {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             owner_id INTEGER NOT NULL,
+            season INTEGER NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -79,13 +95,14 @@ function initializeLeaguesTable(db: Database) {
         CREATE TABLE IF NOT EXISTS roster_settings (
             league_id INTEGER PRIMARY KEY,
             bench_slots INTEGER NOT NULL,
-            starter_slots_qb INTEGER NOT NULL,
-            starter_slots_rb INTEGER NOT NULL,
-            starter_slots_wr INTEGER NOT NULL,
-            starter_slots_te INTEGER NOT NULL,
-            starter_slots_flex INTEGER NOT NULL,
-            starter_slots_def INTEGER NOT NULL,
-            starter_slots_k INTEGER NOT NULL,
+            num_qb INTEGER NOT NULL,
+            num_rb INTEGER NOT NULL,
+            num_wr INTEGER NOT NULL,
+            num_te INTEGER NOT NULL,
+            num_flex INTEGER NOT NULL,
+            num_def INTEGER NOT NULL,
+            num_k INTEGER NOT NULL,
+            flex_positions TEXT NOT NULL,
             FOREIGN KEY (league_id) REFERENCES leagues(id)
         )
     `);
@@ -93,11 +110,7 @@ function initializeLeaguesTable(db: Database) {
   db.run(`
         CREATE TABLE IF NOT EXISTS league_settings (
             league_id INTEGER PRIMARY KEY,
-            number_of_teams INTEGER NOT NULL,
-            regular_season_weeks INTEGER NOT NULL,
-            number_of_playoff_teams INTEGER NOT NULL,
-            lineup_lock_day TEXT NOT NULL,
-            ability_lock_day TEXT NOT NULL,
+            max_num_teams INTEGER NOT NULL,
             FOREIGN KEY (league_id) REFERENCES leagues(id)
         )
     `);
