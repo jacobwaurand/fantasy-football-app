@@ -1,5 +1,9 @@
 {
   "name": "fantasy-football-app",
   "private": true,
-  "workspaces": ["packages/*"]
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "ui": "bun run --cwd packages/frontend dev",
+    "api": "bun run --cwd packages/api dev"
+  }
 }

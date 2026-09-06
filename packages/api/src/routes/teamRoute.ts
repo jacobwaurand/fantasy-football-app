@@ -5,15 +5,13 @@ import {
   deleteTeamById,
   getTeamById,
 } from '../database/teamRepository'
-import { getPlayersByTeamId } from '../database/playerRepository'
+import { 
+  getPlayersByTeamId,
+  addPlayerToTeam,
+  removePlayerFromTeam
+} from '../database/playerRepository'
 
 const teamRoute = new Hono()
-
-teamRoute.get('/:id/players', (c) => {
-  const teamId = c.req.param('id')
-  const players = getPlayersByTeamId(teamId)
-  return c.json(players)
-})
 
 teamRoute.get('/:id', (c) => {
   const id = c.req.param('id')
@@ -42,6 +40,31 @@ teamRoute.delete('/:id', (c) => {
   const id = c.req.param('id')
   deleteTeamById(id)
   return c.text(`Deleted team with ID: ${id}`)
+})
+
+// Team Players Routes
+teamRoute.get('/:id/players', (c) => {
+  const teamId = c.req.param('id')
+  const players = getPlayersByTeamId(teamId)
+  return c.json(players)
+})
+
+teamRoute.post('/:teamId/players/:playerId', (c) => {
+  const teamId = parseInt(c.req.param('teamId'))
+  const playerId = parseInt(c.req.param('playerId'))
+
+  addPlayerToTeam(teamId, playerId)
+
+  return c.text(`Added player ${playerId} to team ${teamId}`)
+})
+
+teamRoute.delete('/:teamId/players/:playerId', (c) => {
+  const teamId = parseInt(c.req.param('teamId'))
+  const playerId = parseInt(c.req.param('playerId'))
+
+  removePlayerFromTeam(teamId, playerId)
+
+  return c.text(`Removed player ${playerId} from team ${teamId}`)
 })
 
 export { teamRoute }

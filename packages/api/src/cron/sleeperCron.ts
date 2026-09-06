@@ -8,7 +8,7 @@ function startCron() {
 }
 
 function dailyCron() {
-  Bun.cron("*/1 * * * *", async () => {
+  Bun.cron("0 0 * * *", async () => {
     const players = await getNflPlayers();
     const res = await insertPlayers(players);
     console.log(`Inserted ${res.inserted} players`);

@@ -1,5 +1,7 @@
 import { db } from "./db";
 import { SleeperPlayer } from "../sleeper/sleeperApi";
+import { RosterSettings } from "@fantasy/shared";
+import { getRosterSettingsByTeamId } from "./teamRepository";
 
 export function getPlayerIdsByLeagueId(leagueId: string) {
   return db.prepare(`
@@ -12,9 +14,14 @@ export function getPlayerIdsByLeagueId(leagueId: string) {
 }
 
 export function addPlayerToTeam(teamId: number, playerId: number) {
-    return db.prepare(
-        'INSERT INTO team_players (player_id, team_id) VALUES (?, ?)',
-    ).run(playerId, teamId)
+  const rosterSettings = getRosterSettingsByTeamId(teamId);
+  const teamPlayers = getPlayersByTeamId(teamId);
+
+  
+  
+  return db.prepare(
+    'INSERT INTO team_players (player_id, team_id) VALUES (?, ?)',
+  ).run(playerId, teamId)
 }
 
 export function removePlayerFromTeam(teamId: number, playerId: number) {
@@ -23,7 +30,7 @@ export function removePlayerFromTeam(teamId: number, playerId: number) {
     ).run(playerId, teamId)
 }
 
-export function getPlayersByTeamId(teamId: string) {
+export function getPlayersByTeamId(teamId: number) {
     return db.prepare(`
         SELECT players.*
         FROM players

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { League } from '@fantasy/shared'
-import { createLeague, deleteLeagueById, getLeagueById } from '../database/leagueRepository'
+import { createLeague, deleteLeagueById, getLeagueById, getRosterSettingsByLeagueId } from '../database/leagueRepository'
+import { getPlayerIdsByLeagueId } from '../database/playerRepository'
 
 const leagueRoute = new Hono()
 
@@ -30,6 +31,20 @@ leagueRoute.delete('/:id', (c) => {
   const id = c.req.param('id')
   deleteLeagueById(id)
   return c.text(`Deleted league with ID: ${id}`)
+})
+
+// League Players Route
+leagueRoute.get('/:id/players', (c) => {
+  const leagueId = c.req.param('id')
+  const playerIds = getPlayerIdsByLeagueId(leagueId)
+  return c.json(playerIds)
+})
+
+// League Roster Settings Route
+leagueRoute.get('/:id/roster-settings', (c) => {
+  const leagueId = c.req.param('id')
+  const rosterSettings = getRosterSettingsByLeagueId(leagueId)
+  return c.json(rosterSettings)
 })
 
 export { leagueRoute }

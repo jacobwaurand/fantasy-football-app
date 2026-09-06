@@ -32,8 +32,8 @@ function initializeTeamsTable(db: Database) {
             class_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (league_id) REFERENCES leagues(id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     `);
 }
@@ -58,9 +58,11 @@ function initializeTeamPlayersTable(db: Database) {
         CREATE TABLE IF NOT EXISTS team_players (
             player_id INTEGER NOT NULL,
             team_id INTEGER NOT NULL,
+            league_id INTEGER NOT NULL,
             PRIMARY KEY (player_id, team_id),
-            FOREIGN KEY (player_id) REFERENCES players(id),
-            FOREIGN KEY (team_id) REFERENCES teams(id)
+            UNIQUE (player_id, league_id),
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+            FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
         )
     `);
 }
@@ -72,8 +74,8 @@ function initializeMatchupsTable(db: Database) {
             week INTEGER NOT NULL,
             team_a_id INTEGER NOT NULL,
             team_b_id INTEGER NOT NULL,
-            FOREIGN KEY (team_a_id) REFERENCES teams(id),
-            FOREIGN KEY (team_b_id) REFERENCES teams(id)
+            FOREIGN KEY (team_a_id) REFERENCES teams(id) ON DELETE CASCADE,
+            FOREIGN KEY (team_b_id) REFERENCES teams(id) ON DELETE CASCADE
         )
     `);
 }
@@ -87,7 +89,7 @@ function initializeLeaguesTable(db: Database) {
             season INTEGER NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (owner_id) REFERENCES users(id)
+            FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
         )
     `);
 
@@ -103,7 +105,7 @@ function initializeLeaguesTable(db: Database) {
             num_def INTEGER NOT NULL,
             num_k INTEGER NOT NULL,
             flex_positions TEXT NOT NULL,
-            FOREIGN KEY (league_id) REFERENCES leagues(id)
+            FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE
         )
     `);
 
@@ -111,7 +113,7 @@ function initializeLeaguesTable(db: Database) {
         CREATE TABLE IF NOT EXISTS league_settings (
             league_id INTEGER PRIMARY KEY,
             max_num_teams INTEGER NOT NULL,
-            FOREIGN KEY (league_id) REFERENCES leagues(id)
+            FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE
         )
     `);
 }
