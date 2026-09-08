@@ -1,70 +1,62 @@
-import { Hono } from 'hono'
-import type { Team } from '@fantasy/shared'
-import {
-  createTeam,
-  deleteTeamById,
-  getTeamById,
-} from '../database/teamRepository'
-import { 
-  getPlayersByTeamId,
-  addPlayerToTeam,
-  removePlayerFromTeam
-} from '../database/playerRepository'
+import { Hono } from "hono";
+import type { Team } from "@fantasy/shared";
+import { createTeam, deleteTeamById, getTeamById } from "../database/teamRepository";
+import { getPlayersByTeamId, addPlayerToTeam, removePlayerFromTeam } from "../database/playerRepository";
 
-const teamRoute = new Hono()
+const teamRoute = new Hono();
 
-teamRoute.get('/:id', (c) => {
-  const id = c.req.param('id')
-  const team = getTeamById(id)
-  return c.json(team)
-})
+teamRoute.get("/:id", (c) => {
+  const id = parseInt(c.req.param("id"));
+  const team = getTeamById(id);
+  return c.json(team);
+});
 
-teamRoute.post('/', async (c) => {
-  const team: Partial<Team> = await c.req.json()
+teamRoute.post("/", async (c) => {
+  const team: Partial<Team> = await c.req.json();
 
-  if (!team.name || !team.leagueId || !team.userId) {
-    return c.json({ message: 'Missing required fields' }, 400)
+  if (!team.name || !team.partyId || !team.userId) {
+    return c.json({ message: "Missing required fields" }, 400);
   }
 
   const result = createTeam({
     name: team.name,
-    leagueId: team.leagueId,
+    partyId: team.partyId,
     userId: team.userId,
-    classId: team.classId,
-  })
+    classId: team?.classId,
+  });
 
-  return c.text(`Created Team: ${result.lastInsertRowid}`)
-})
+  return c.text(`Created Team: ${result.lastInsertRowid}`);
+});
 
-teamRoute.delete('/:id', (c) => {
-  const id = c.req.param('id')
-  deleteTeamById(id)
-  return c.text(`Deleted team with ID: ${id}`)
-})
+teamRoute.delete("/:id", (c) => {
+  const id = parseInt(c.req.param("id"));
+  deleteTeamById(id);
+  return c.text(`Deleted team with ID: ${id}`);
+});
 
 // Team Players Routes
-teamRoute.get('/:id/players', (c) => {
-  const teamId = c.req.param('id')
-  const players = getPlayersByTeamId(teamId)
-  return c.json(players)
-})
+teamRoute.get("/:id/players", (c) => {
+  const teamId = parseInt(c.req.param("id"));
+  const players = getPlayersByTeamId(teamId);
+  return c.json(players);
+});
 
-teamRoute.post('/:teamId/players/:playerId', (c) => {
-  const teamId = parseInt(c.req.param('teamId'))
-  const playerId = parseInt(c.req.param('playerId'))
+teamRoute.post("/:teamId/players/:playerId", (c) => {
+  const teamId = parseInt(c.req.param("teamId"));
+  const playerId = parseInt(c.req.param("playerId"));
 
-  addPlayerToTeam(teamId, playerId)
+  const result = addPlayerToTeam(teamId, playerId);
 
-  return c.text(`Added player ${playerId} to team ${teamId}`)
-})
+  return c.text(`Added player ${playerId} to team ${teamId}`);
+});
 
-teamRoute.delete('/:teamId/players/:playerId', (c) => {
-  const teamId = parseInt(c.req.param('teamId'))
-  const playerId = parseInt(c.req.param('playerId'))
+teamRoute.delete("/:teamId/players/:playerId", (c) => {
+  const teamId = parseInt(c.req.param("teamId"));
+  const playerId = parseInt(c.req.param("playerId"));
 
-  removePlayerFromTeam(teamId, playerId)
+  removePlayerFromTeam(teamId, playerId);
 
-  return c.text(`Removed player ${playerId} from team ${teamId}`)
-})
+  return c.text(`Removed player ${playerId} from team ${teamId}`);
+});
 
-export { teamRoute }
+export { teamRoute };

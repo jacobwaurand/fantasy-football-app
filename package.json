@@ -6,6 +6,6 @@
   ],
   "scripts": {
     "ui": "bun run --cwd packages/frontend dev",
-    "api": "bun run --cwd packages/api dev"
+    "api": "bun run --hot packages/api/src/index.ts"
   }
 }

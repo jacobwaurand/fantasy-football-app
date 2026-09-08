@@ -1,7 +1,7 @@
 export type Team = {
     id: number;
     name: string;
-    leagueId: number;
+    partyId: number;
     userId: number;
     classId?: string;
 };
@@ -9,5 +9,5 @@ export type Team = {
 export type TeamPlayer = {
     playerId: number;
     teamId: number;
-    leagueId: number;
+    partyId: number;
 };

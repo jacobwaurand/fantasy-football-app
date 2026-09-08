@@ -1,6 +1,5 @@
 import { getNflPlayers, getWeeklyStats } from "../sleeper/sleeperApi";
 import { insertPlayers } from "../database/playerRepository";
-import type { Player } from "@fantasy/shared";
 
 function startCron() {
   dailyCron();

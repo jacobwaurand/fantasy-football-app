@@ -1,4 +1,4 @@
-export type League = {
+export type Party = {
     id: number;
     name: string;
     ownerId: number;
@@ -6,7 +6,7 @@ export type League = {
 };
 
 export type RosterSettings = {
-    leagueId: number;
+    partyId: number;
     benchSlots: number;
     numQB: number;
     numRB: number;
@@ -18,13 +18,13 @@ export type RosterSettings = {
     flexPositions: string[];
 };
 
-export type LeagueSettings = {
-    leagueId: number;
+export type PartySettings = {
+    partyId: number;
     maxNumTeams: number;
 };
 
 export const defaultRosterSettings: RosterSettings = {
-    leagueId: 0,
+    partyId: 0,
     benchSlots: 6,
     numQB: 1,
     numRB: 2,
@@ -36,7 +36,7 @@ export const defaultRosterSettings: RosterSettings = {
     flexPositions: ["RB", "WR", "TE"],
 };
 
-export const defaultLeagueSettings: LeagueSettings = {
-    leagueId: 0,
+export const defaultPartySettings: PartySettings = {
+    partyId: 0,
     maxNumTeams: 4,
 };

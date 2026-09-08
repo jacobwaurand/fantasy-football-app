@@ -1,42 +1,60 @@
 import { db } from "./db";
 import { SleeperPlayer } from "../sleeper/sleeperApi";
-import { RosterSettings } from "@fantasy/shared";
-import { getRosterSettingsByTeamId } from "./teamRepository";
+import { defaultRosterSettings, canAddPlayerToTeam, type Player } from "@fantasy/shared";
+import { getTeamById } from "./teamRepository";
 
-export function getPlayerIdsByLeagueId(leagueId: string) {
-  return db.prepare(`
+export function getPlayerIdsByPartyId(partyId: number) {
+  return db
+    .prepare(
+      `
     SELECT players.id
     FROM players
-    INNER JOIN team_players ON team_players.player_id = players.id
-    INNER JOIN teams ON teams.id = team_players.team_id
-    WHERE teams.league_id = ?
-  `).all(leagueId)
+    INNER JOIN team_players ON team_players.playerId = players.id
+    INNER JOIN teams ON teams.id = team_players.teamId
+    WHERE teams.partyId = ?
+  `
+    )
+    .all(partyId);
 }
 
 export function addPlayerToTeam(teamId: number, playerId: number) {
-  const rosterSettings = getRosterSettingsByTeamId(teamId);
+  const rosterSettings = defaultRosterSettings; // Replace with actual roster settings retrieval logic if needed
   const teamPlayers = getPlayersByTeamId(teamId);
+  const team = getTeamById(teamId);
+  const player = getPlayer(playerId);
 
-  
-  
-  return db.prepare(
-    'INSERT INTO team_players (player_id, team_id) VALUES (?, ?)',
-  ).run(playerId, teamId)
+  if (!team) {
+    throw new Error(`Team not found: ${teamId}`);
+  }
+  if (!player) {
+    throw new Error(`Player not found: ${playerId}`);
+  }
+  if (!canAddPlayerToTeam(rosterSettings, teamPlayers, player)) {
+    throw new Error(`Cannot add player ${playerId} to team ${teamId}`);
+  }
+
+  return db.prepare("INSERT INTO team_players (playerId, teamId, partyId) VALUES (?, ?, ?)").run(playerId, teamId, team.partyId);
 }
 
 export function removePlayerFromTeam(teamId: number, playerId: number) {
-    return db.prepare(
-        'DELETE FROM team_players WHERE player_id = ? AND team_id = ?',
-    ).run(playerId, teamId)
+  return db.prepare("DELETE FROM team_players WHERE playerId = ? AND teamId = ?").run(playerId, teamId);
 }
 
 export function getPlayersByTeamId(teamId: number) {
-    return db.prepare(`
+  return db
+    .prepare(
+      `
         SELECT players.*
         FROM players
-        INNER JOIN team_players ON team_players.player_id = players.id
-        WHERE team_players.team_id = ?
-    `).all(teamId)
+        INNER JOIN team_players ON team_players.playerId = players.id
+        WHERE team_players.teamId = ?
+    `
+    )
+    .all(teamId) as Player[];
+}
+
+export function getPlayer(playerId: number): Player | null {
+  return (db.prepare("SELECT * FROM players WHERE id = ?").get(playerId) as Player | undefined) ?? null;
 }
 
 export async function insertPlayers(players: SleeperPlayer[]) {
@@ -45,7 +63,7 @@ export async function insertPlayers(players: SleeperPlayer[]) {
   }
 
   const insertStatement = db.prepare(`
-    INSERT OR IGNORE INTO players (sleeper_id, first_name, last_name, full_name, position, team, status)
+    INSERT OR IGNORE INTO players (sleeperId, firstName, lastName, fullName, position, team, status)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
@@ -65,7 +83,7 @@ export async function insertPlayers(players: SleeperPlayer[]) {
         player.full_name ?? null,
         player.position ?? null,
         player.team ?? null,
-        player.status ?? null,
+        player.status ?? null
       );
 
       if (result.changes > 0) {

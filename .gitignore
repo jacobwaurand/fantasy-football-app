@@ -2,3 +2,4 @@ node_modules/
 .bun/
 .vscode
 bun.lock
+fantasy-football.db
