@@ -183,13 +183,13 @@ function createTeam() {
   </main>
 </template>
 
-<style>
+<style scoped>
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
   color: #e9efe8;
   background: #111713;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-family);
   font-synthesis: none;
 }
 * {
